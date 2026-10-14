@@ -1,0 +1,102 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <!-- Welcome, Options, Ready to install. The installation folder is fixed. -->
+  <Fragment>
+    <UI Id="FidoLogonUI">
+      <TextStyle Id="WixUI_Font_Normal" FaceName="Segoe UI" Size="9" />
+      <TextStyle Id="WixUI_Font_Bigger" FaceName="Segoe UI" Size="12" />
+      <TextStyle Id="WixUI_Font_Title" FaceName="Segoe UI" Size="9" Bold="yes" />
+      <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+
+      <DialogRef Id="ErrorDlg" />
+      <DialogRef Id="FatalError" />
+      <DialogRef Id="FilesInUse" />
+      <DialogRef Id="MsiRMFilesInUse" />
+      <DialogRef Id="PrepareDlg" />
+      <DialogRef Id="ProgressDlg" />
+      <DialogRef Id="ResumeDlg" />
+      <DialogRef Id="UserExit" />
+
+      <Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999" />
+
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="OptionsDlg" Condition="NOT Installed" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Condition="Installed AND PATCH" />
+
+      <Publish Dialog="OptionsDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" />
+      <Publish Dialog="OptionsDlg" Control="Next" Property="OPTIONS_CHOSEN" Value="1" Order="1" />
+      <Publish Dialog="OptionsDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="2" />
+
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="OptionsDlg" Order="1"
+               Condition="NOT Installed" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="2"
+               Condition="Installed AND NOT PATCH" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2"
+               Condition="Installed AND PATCH" />
+
+      <Publish Dialog="MaintenanceWelcomeDlg" Control="Next" Event="NewDialog" Value="MaintenanceTypeDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RemoveButton" Event="NewDialog" Value="VerifyReadyDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="Back" Event="NewDialog" Value="MaintenanceWelcomeDlg" />
+
+      <!-- Options are chosen at installation; change them by reinstalling with new msiexec properties. -->
+      <Property Id="ARPNOMODIFY" Value="1" />
+    </UI>
+
+    <UIRef Id="WixUI_Common" />
+  </Fragment>
+
+  <Fragment>
+    <UI>
+      <Dialog Id="OptionsDlg" Width="370" Height="270" Title="!(loc.InstallDirDlg_Title)">
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes"
+                 Text="!(loc.WixUINext)" />
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)" />
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes"
+                 Text="!(loc.WixUICancel)">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no"
+                 Text="!(loc.InstallDirDlgBannerBitmap)" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="290" Height="15" Transparent="yes" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}Installation options" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes"
+                 Text="Choose the shortcuts and the security options." />
+
+        <Control Id="StartMenuCheckBox" Type="CheckBox" X="20" Y="50" Width="330" Height="15"
+                 Property="STARTMENU_SHORTCUT" CheckBoxValue="1"
+                 Text="Start menu shortcut to the FidoLogon configuration tool" />
+        <Control Id="DesktopCheckBox" Type="CheckBox" X="20" Y="65" Width="330" Height="15"
+                 Property="DESKTOP_SHORTCUT" CheckBoxValue="1"
+                 Text="Desktop shortcut to the FidoLogon configuration tool" />
+        <Control Id="EmergencyCheckBox" Type="CheckBox" X="20" Y="80" Width="330" Height="15"
+                 Property="EMERGENCY_SHORTCUT" CheckBoxValue="1"
+                 Text="Start menu shortcut to the emergency disable script" />
+
+        <Control Id="ModelsTitle" Type="Text" X="20" Y="100" Width="330" Height="12" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}Security key models" />
+        <Control Id="ModelPolicyCheckBox" Type="CheckBox" X="20" Y="113" Width="330" Height="15"
+                 Property="MODEL_POLICY" CheckBoxValue="1"
+                 Text="Enroll only key models certified by the FIDO Alliance" />
+        <Control Id="ModelPolicyText" Type="Text" X="32" Y="129" Width="318" Height="20" NoPrefix="yes"
+                 Text="The key's attestation is checked against the FIDO Metadata Service, downloaded daily from fidoalliance.org." />
+
+        <Control Id="CertificateTitle" Type="Text" X="20" Y="153" Width="330" Height="12" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}Code-signing certificate" />
+        <Control Id="TrustCheckBox" Type="CheckBox" X="20" Y="166" Width="330" Height="15"
+                 Property="TRUST_CERTIFICATE" CheckBoxValue="1"
+                 Text="Trust the FidoLogon code-signing certificate on this computer"
+                 HideCondition="CERTIFICATE_TRUSTED AND NOT TRUST_CERTIFICATE_PREVIOUS" />
+        <Control Id="TrustWarning" Type="Text" X="32" Y="182" Width="318" Height="50" NoPrefix="yes"
+                 Text="Adds the self-signed certificate to the Trusted Root and Trusted Publishers stores of this computer, so that Windows trusts FidoLogon's signature. Anything signed with its private key would then be trusted: only do this if you trust whoever holds it. Removed when FidoLogon is uninstalled."
+                 HideCondition="CERTIFICATE_TRUSTED AND NOT TRUST_CERTIFICATE_PREVIOUS" />
+        <Control Id="AlreadyTrusted" Type="Text" X="20" Y="166" Width="330" Height="30" NoPrefix="yes"
+                 Text="The FidoLogon code-signing certificate is already trusted on this computer."
+                 Hidden="yes" ShowCondition="CERTIFICATE_TRUSTED AND NOT TRUST_CERTIFICATE_PREVIOUS" />
+      </Dialog>
+    </UI>
+  </Fragment>
+
+</Wix>

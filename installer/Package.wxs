@@ -1,0 +1,275 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:iis="http://wixtoolset.org/schemas/v4/wxs/iis"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <?if $(SigningCertThumbprint) = "" ?>
+  <?error SigningCertThumbprint is not defined: build the installer with scripts/package.ps1. ?>
+  <?endif?>
+
+  <Package Name="FidoLogon"
+           Manufacturer="FidoLogon contributors"
+           Version="$(ProductVersion)"
+           UpgradeCode="439FA2B5-C99D-4FA5-A42F-C444F1FC181D"
+           Scope="perMachine"
+           Compressed="yes">
+
+    <!-- Installing any version replaces the installed one, whatever its version: pre-releases share
+         the numeric version of the release (0.1.0-rc.1 and 0.1.0 are both 0.1.0), and going back to
+         an older build must not leave two installations. -->
+    <MajorUpgrade AllowDowngrades="yes" />
+    <!-- Always write every file. Otherwise a file of the installed version with a higher version
+         (the bundled .NET runtime of a newer build, on a downgrade) blocks its component, and the
+         removal of the old version then deletes it: the service no longer starts and setup fails. -->
+    <Property Id="REINSTALLMODE" Value="amus" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Property Id="ARPCOMMENTS" Value="Windows sign-in with FIDO2 security keys" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/codebfu/fidologon" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/codebfu/fidologon/blob/main/docs/recovery.md" />
+
+    <Icon Id="FidoLogonIcon" SourceFile="$(IconFile)" />
+    <Property Id="ARPPRODUCTICON" Value="FidoLogonIcon" />
+
+    <Launch Condition="VersionNT64" Message="FidoLogon requires 64-bit Windows." />
+
+    <UIRef Id="FidoLogonUI" />
+    <!-- Pulls in the installer options fragment (properties, searches and defaults). -->
+    <PropertyRef Id="OPTIONS_CHOSEN" />
+    <WixVariable Id="WixUIBannerBmp" Value="banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="dialog.bmp" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="FidoLogon" />
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="FidoLogon" AllowAbsent="no">
+      <ComponentGroupRef Id="ApplicationFiles" />
+      <ComponentRef Id="CredentialProvider" />
+      <ComponentRef Id="LockService" />
+      <ComponentRef Id="ConfigTool" />
+      <ComponentRef Id="StartMenuShortcut" />
+      <ComponentRef Id="DesktopShortcut" />
+      <ComponentRef Id="EmergencyShortcut" />
+      <ComponentRef Id="TrustCertificate" />
+      <ComponentRef Id="CommandLinePath" />
+      <ComponentRef Id="ModelPolicyOff" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <ComponentGroup Id="ApplicationFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(StagingDir)**">
+        <Exclude Files="$(StagingDir)FidoLogonCredentialProvider.dll" />
+        <Exclude Files="$(StagingDir)FidoLogon.Service.exe" />
+        <Exclude Files="$(StagingDir)FidoLogon.Config.exe" />
+        <Exclude Files="$(StagingDir)**\*.pdb" />
+      </Files>
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <!-- Credential provider and password filter, both served by the same COM DLL. -->
+    <Component Id="CredentialProvider" Directory="INSTALLFOLDER">
+      <File Id="CredentialProviderDll" Source="$(StagingDir)FidoLogonCredentialProvider.dll" KeyPath="yes" />
+
+      <RegistryKey Root="HKCR" Key="CLSID\{FAAD8F12-6991-448B-BF78-892ED3E6A76B}">
+        <RegistryValue Type="string" Value="FidoLogon Credential Provider" />
+        <RegistryKey Key="InprocServer32">
+          <RegistryValue Type="string" Value="[#CredentialProviderDll]" />
+          <RegistryValue Name="ThreadingModel" Type="string" Value="Apartment" />
+        </RegistryKey>
+      </RegistryKey>
+      <RegistryKey Root="HKCR" Key="CLSID\{0D55732F-293A-41B1-90F3-D260B9C8EF94}">
+        <RegistryValue Type="string" Value="FidoLogon Credential Provider Filter" />
+        <RegistryKey Key="InprocServer32">
+          <RegistryValue Type="string" Value="[#CredentialProviderDll]" />
+          <RegistryValue Name="ThreadingModel" Type="string" Value="Apartment" />
+        </RegistryKey>
+      </RegistryKey>
+
+      <RegistryValue Root="HKLM"
+                     Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\Credential Providers\{FAAD8F12-6991-448B-BF78-892ED3E6A76B}"
+                     Type="string" Value="FidoLogon Credential Provider" />
+      <RegistryValue Root="HKLM"
+                     Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\Credential Provider Filters\{0D55732F-293A-41B1-90F3-D260B9C8EF94}"
+                     Type="string" Value="FidoLogon Credential Provider Filter" />
+    </Component>
+  </Fragment>
+
+  <Fragment>
+    <Component Id="LockService" Directory="INSTALLFOLDER">
+      <File Id="ServiceExe" Source="$(StagingDir)FidoLogon.Service.exe" KeyPath="yes" />
+      <ServiceInstall Id="FidoLogonService"
+                      Name="FidoLogon"
+                      DisplayName="FidoLogon"
+                      Description="Locks the session when the security key used to sign in is removed."
+                      Type="ownProcess"
+                      Start="auto"
+                      ErrorControl="normal"
+                      Account="LocalSystem"
+                      Vital="yes">
+        <util:ServiceConfig FirstFailureActionType="restart"
+                            SecondFailureActionType="restart"
+                            ThirdFailureActionType="restart"
+                            RestartServiceDelayInSeconds="5"
+                            ResetPeriodInDays="1" />
+      </ServiceInstall>
+      <ServiceControl Id="FidoLogonServiceControl" Name="FidoLogon" Start="install" Stop="both" Remove="uninstall"
+                      Wait="yes" />
+      <util:EventSource Name="FidoLogon" Log="Application"
+                        EventMessageFile="[WindowsFolder]Microsoft.NET\Framework64\v4.0.30319\EventLogMessages.dll" />
+    </Component>
+  </Fragment>
+
+  <Fragment>
+    <Component Id="ConfigTool" Directory="INSTALLFOLDER">
+      <File Id="ConfigExe" Source="$(StagingDir)FidoLogon.Config.exe" KeyPath="yes" />
+      <!-- Tells an upgrade that the choices below were recorded (versions before 0.1.0 did not). -->
+      <RegistryValue Root="HKLM" Key="SOFTWARE\FidoLogon Installer" Name="OptionsRecorded" Type="integer" Value="1" />
+    </Component>
+  </Fragment>
+
+  <!--
+    Installer options. Each one is a public property that can be set on the msiexec command line
+    (1 = on, 0 = off), or with the check boxes of the Options page:
+      STARTMENU_SHORTCUT  Start menu shortcut to the configuration tool (on by default)
+      DESKTOP_SHORTCUT    desktop shortcut to the configuration tool
+      EMERGENCY_SHORTCUT  Start menu shortcut to emergency-disable.ps1
+      TRUST_CERTIFICATE   trust the code-signing certificate on this computer (see docs/signing.md);
+                          only applied when the certificate is not trusted yet
+      MODEL_POLICY        enroll only key models certified by the FIDO Alliance, with the daily
+                          FIDO Metadata Service download (on by default). The service applies it
+                          once; later changes are made with the CLI or the configuration tool.
+    An upgrade or repair keeps the previous choices unless the command line sets them.
+  -->
+  <Fragment>
+    <Property Id="STARTMENU_SHORTCUT" Secure="yes" />
+    <Property Id="DESKTOP_SHORTCUT" Secure="yes" />
+    <Property Id="EMERGENCY_SHORTCUT" Secure="yes" />
+    <Property Id="TRUST_CERTIFICATE" Secure="yes" />
+    <Property Id="MODEL_POLICY" Secure="yes" />
+    <!-- Set by the Options page: the check boxes then hold the final choices. -->
+    <Property Id="OPTIONS_CHOSEN" Secure="yes" />
+
+    <!-- Choices of the installed version: each value is the key path of the matching component. -->
+    <Property Id="OPTIONS_RECORDED">
+      <RegistrySearch Root="HKLM" Key="SOFTWARE\FidoLogon Installer" Name="OptionsRecorded" Type="raw"
+                      Bitness="always64" />
+    </Property>
+    <Property Id="STARTMENU_SHORTCUT_PREVIOUS">
+      <RegistrySearch Root="HKLM" Key="SOFTWARE\FidoLogon Installer" Name="StartMenuShortcut" Type="raw"
+                      Bitness="always64" />
+    </Property>
+    <Property Id="DESKTOP_SHORTCUT_PREVIOUS">
+      <RegistrySearch Root="HKLM" Key="SOFTWARE\FidoLogon Installer" Name="DesktopShortcut" Type="raw"
+                      Bitness="always64" />
+    </Property>
+    <Property Id="EMERGENCY_SHORTCUT_PREVIOUS">
+      <RegistrySearch Root="HKLM" Key="SOFTWARE\FidoLogon Installer" Name="EmergencyShortcut" Type="raw"
+                      Bitness="always64" />
+    </Property>
+    <Property Id="MODEL_POLICY_OFF_PREVIOUS">
+      <RegistrySearch Root="HKLM" Key="SOFTWARE\FidoLogon Installer" Name="ModelPolicyOff" Type="raw"
+                      Bitness="always64" />
+    </Property>
+    <Property Id="TRUST_CERTIFICATE_PREVIOUS">
+      <RegistrySearch Root="HKLM" Key="SOFTWARE\FidoLogon Installer" Name="TrustCertificate" Type="raw"
+                      Bitness="always64" />
+    </Property>
+
+    <!-- The signing certificate is already a trusted root (machine store, Group Policy or Intune). -->
+    <Property Id="CERTIFICATE_TRUSTED">
+      <RegistrySearch Root="HKLM" Key="SOFTWARE\Microsoft\SystemCertificates\ROOT\Certificates\$(SigningCertThumbprint)"
+                      Name="Blob" Type="raw" Bitness="always64" />
+      <RegistrySearch Root="HKLM"
+                      Key="SOFTWARE\Policies\Microsoft\SystemCertificates\Root\Certificates\$(SigningCertThumbprint)"
+                      Name="Blob" Type="raw" Bitness="always64" />
+      <RegistrySearch Root="HKLM"
+                      Key="SOFTWARE\Microsoft\EnterpriseCertificates\Root\Certificates\$(SigningCertThumbprint)"
+                      Name="Blob" Type="raw" Bitness="always64" />
+    </Property>
+
+    <!-- Defaults when neither the command line nor the Options page chose: keep the previous
+         choices, and add the Start menu shortcut when none were recorded (first installation, or
+         upgrade from a version that always created it). -->
+    <SetProperty Id="STARTMENU_SHORTCUT" Value="1" After="AppSearch" Sequence="both"
+                 Condition="NOT STARTMENU_SHORTCUT AND NOT OPTIONS_CHOSEN AND (STARTMENU_SHORTCUT_PREVIOUS OR NOT OPTIONS_RECORDED)" />
+    <SetProperty Id="DESKTOP_SHORTCUT" Value="1" After="AppSearch" Sequence="both"
+                 Condition="NOT DESKTOP_SHORTCUT AND NOT OPTIONS_CHOSEN AND DESKTOP_SHORTCUT_PREVIOUS" />
+    <SetProperty Id="EMERGENCY_SHORTCUT" Value="1" After="AppSearch" Sequence="both"
+                 Condition="NOT EMERGENCY_SHORTCUT AND NOT OPTIONS_CHOSEN AND EMERGENCY_SHORTCUT_PREVIOUS" />
+    <SetProperty Id="TRUST_CERTIFICATE" Value="1" After="AppSearch" Sequence="both"
+                 Condition="NOT TRUST_CERTIFICATE AND NOT OPTIONS_CHOSEN AND TRUST_CERTIFICATE_PREVIOUS" />
+    <!-- On unless it was turned off at a previous installation (versions before 0.1.0-rc.5 had no
+         such choice: they get the new default). -->
+    <SetProperty Id="MODEL_POLICY" Value="1" After="AppSearch" Sequence="both"
+                 Condition="NOT MODEL_POLICY AND NOT OPTIONS_CHOSEN AND NOT MODEL_POLICY_OFF_PREVIOUS" />
+  </Fragment>
+
+  <Fragment>
+    <StandardDirectory Id="ProgramMenuFolder" />
+    <StandardDirectory Id="DesktopFolder" />
+
+    <Component Id="StartMenuShortcut" Directory="INSTALLFOLDER" Condition="STARTMENU_SHORTCUT = 1">
+      <Shortcut Id="ConfigStartMenuShortcut" Directory="ProgramMenuFolder" Name="FidoLogon configuration"
+                Description="Enroll FIDO2 security keys" Target="[INSTALLFOLDER]FidoLogon.Config.exe" WorkingDirectory="INSTALLFOLDER"
+                Icon="FidoLogonIcon" />
+      <RegistryValue Root="HKLM" Key="SOFTWARE\FidoLogon Installer" Name="StartMenuShortcut" Type="integer"
+                     Value="1" KeyPath="yes" />
+    </Component>
+
+    <Component Id="DesktopShortcut" Directory="INSTALLFOLDER" Condition="DESKTOP_SHORTCUT = 1">
+      <Shortcut Id="ConfigDesktopShortcut" Directory="DesktopFolder" Name="FidoLogon configuration"
+                Description="Enroll FIDO2 security keys" Target="[INSTALLFOLDER]FidoLogon.Config.exe" WorkingDirectory="INSTALLFOLDER"
+                Icon="FidoLogonIcon" />
+      <RegistryValue Root="HKLM" Key="SOFTWARE\FidoLogon Installer" Name="DesktopShortcut" Type="integer"
+                     Value="1" KeyPath="yes" />
+    </Component>
+
+    <!-- emergency-disable.ps1 asks for elevation and confirmation itself (-Elevate). -->
+    <Component Id="EmergencyShortcut" Directory="INSTALLFOLDER" Condition="EMERGENCY_SHORTCUT = 1">
+      <Shortcut Id="EmergencyStartMenuShortcut" Directory="ProgramMenuFolder" Name="FidoLogon emergency disable"
+                Description="Restore password sign-in and disable the FidoLogon tile"
+                Target="[System64Folder]WindowsPowerShell\v1.0\powershell.exe"
+                Arguments="-NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]emergency-disable.ps1&quot; -Elevate"
+                WorkingDirectory="INSTALLFOLDER" Icon="FidoLogonIcon" />
+      <RegistryValue Root="HKLM" Key="SOFTWARE\FidoLogon Installer" Name="EmergencyShortcut" Type="integer"
+                     Value="1" KeyPath="yes" />
+    </Component>
+  </Fragment>
+
+  <Fragment>
+    <!-- Trusts the code-signing certificate (Trusted Root Certification Authorities and Trusted
+         Publishers of the local machine), like scripts/trust-certificate.ps1. Opt-in, never done
+         when the certificate was already trusted by other means, and undone at uninstallation. -->
+    <Binary Id="SigningCertificate" SourceFile="$(SigningCertFile)" />
+    <Component Id="TrustCertificate" Directory="INSTALLFOLDER"
+               Condition="TRUST_CERTIFICATE = 1 AND (NOT CERTIFICATE_TRUSTED OR TRUST_CERTIFICATE_PREVIOUS)">
+      <iis:Certificate Id="SigningCertificateRoot" Name="FidoLogon Code Signing" StoreLocation="localMachine"
+                       StoreName="root" BinaryRef="SigningCertificate" Overwrite="yes" Request="no" />
+      <iis:Certificate Id="SigningCertificatePublisher" Name="FidoLogon Code Signing" StoreLocation="localMachine"
+                       StoreName="trustedPublisher" BinaryRef="SigningCertificate" Overwrite="yes" Request="no" />
+      <RegistryValue Root="HKLM" Key="SOFTWARE\FidoLogon Installer" Name="TrustCertificate" Type="integer"
+                     Value="1" KeyPath="yes" />
+    </Component>
+  </Fragment>
+
+  <Fragment>
+    <!-- Records that certified key models should not be enforced: the service then leaves the policy
+         off (see FidoLogonService.ApplyInstallationModelPolicy). -->
+    <Component Id="ModelPolicyOff" Directory="INSTALLFOLDER" Condition="MODEL_POLICY &lt;&gt; 1">
+      <RegistryValue Root="HKLM" Key="SOFTWARE\FidoLogon Installer" Name="ModelPolicyOff" Type="integer"
+                     Value="1" KeyPath="yes" />
+    </Component>
+  </Fragment>
+
+  <Fragment>
+    <!-- Makes fidologon.exe available from any administrator command prompt. -->
+    <Component Id="CommandLinePath" Directory="INSTALLFOLDER">
+      <Environment Id="PathEntry" Name="PATH" Value="[INSTALLFOLDER]" Part="last" Action="set" System="yes" />
+      <RegistryValue Root="HKLM" Key="SOFTWARE\FidoLogon Installer" Name="PathEntry" Type="integer" Value="1"
+                     KeyPath="yes" />
+    </Component>
+  </Fragment>
+
+</Wix>

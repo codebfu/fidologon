@@ -1,0 +1,18 @@
+<Window x:Class="FidoLogon.Config.TouchPromptWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Security key" Width="420" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False" Topmost="True">
+  <DockPanel Margin="20">
+    <Image DockPanel.Dock="Left" Source="/fidologon.png" Width="64" Height="64" VerticalAlignment="Top"
+           Margin="0,0,16,0" />
+    <StackPanel>
+      <TextBlock Text="Touch your security key" FontSize="18" FontWeight="SemiBold" />
+      <TextBlock x:Name="StepText" Margin="0,6,0,0" Foreground="#0054A6" FontWeight="SemiBold" />
+      <TextBlock x:Name="DetailText" Margin="0,4,0,0" TextWrapping="Wrap" Foreground="#555" />
+      <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Foreground="#555"
+                 Text="The key blinks while it waits. Touch its contact (or button) once." />
+      <ProgressBar IsIndeterminate="True" Height="4" Margin="0,14,0,0" />
+    </StackPanel>
+  </DockPanel>
+</Window>

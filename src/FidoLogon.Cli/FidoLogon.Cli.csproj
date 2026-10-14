@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>fidologon</AssemblyName>
+    <RootNamespace>FidoLogon.Cli</RootNamespace>
+    <Description>FidoLogon command-line configuration tool.</Description>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\assets\icon\fidologon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="FidoLogon.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FidoLogon.Core\FidoLogon.Core.csproj" />
+  </ItemGroup>
+
+</Project>

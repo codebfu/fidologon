@@ -1,0 +1,26 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+
+  <PropertyGroup>
+    <OutputName Condition="'$(OutputName)' == ''">FidoLogon</OutputName>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <ProductVersion Condition="'$(ProductVersion)' == ''">0.0.0</ProductVersion>
+    <!-- Folder produced by scripts/build.ps1 with every file to ship (trailing backslash required). -->
+    <StagingDir Condition="'$(StagingDir)' == ''">$(MSBuildThisFileDirectory)..\build\staging\</StagingDir>
+    <IconFile>$(MSBuildThisFileDirectory)..\assets\icon\fidologon.ico</IconFile>
+    <!-- Public code-signing certificate the installer can offer to trust; scripts/package.ps1 passes
+         its thumbprint. -->
+    <SigningCertFile>$(MSBuildThisFileDirectory)..\certs\FidoLogon-CodeSigning.cer</SigningCertFile>
+    <!-- Per-machine package: ProgramMenuFolder and DesktopFolder are the all-users folders, so these
+         per-user shortcut checks are false positives. ICE61 flags the upgrade of the same version (AllowDowngrades), wanted
+         for pre-releases. ICE40 flags REINSTALLMODE in the Property table, set on purpose (see Package.wxs). -->
+    <SuppressIces>ICE38;ICE40;ICE43;ICE57;ICE61</SuppressIces>
+    <DefineConstants>ProductVersion=$(ProductVersion);StagingDir=$(StagingDir);IconFile=$(IconFile);SigningCertFile=$(SigningCertFile);SigningCertThumbprint=$(SigningCertThumbprint)</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.Iis.wixext" Version="5.0.2" />
+  </ItemGroup>
+
+</Project>

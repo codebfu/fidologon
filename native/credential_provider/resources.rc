@@ -1,0 +1,9 @@
+#include "resource.h"
+
+IDB_TILE_IMAGE BITMAP "tile_image.bmp"
+IDR_TILE_IMAGE_PNG RCDATA "tile_image.png"
+
+#define FL_FILE_DESCRIPTION "FidoLogon credential provider"
+#define FL_ORIGINAL_FILENAME "FidoLogonCredentialProvider.dll"
+#define FL_FILE_TYPE VFT_DLL
+#include "version_common.rc"

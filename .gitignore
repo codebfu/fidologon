@@ -1,0 +1,15 @@
+# Build outputs
+build/
+artifacts/
+bin/
+obj/
+TestResults/
+
+# Signing material: private key and password (never commit)
+.secrets/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo

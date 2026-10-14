@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>FidoLogon.Config</AssemblyName>
+    <Description>FidoLogon configuration tool.</Description>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Also shown by every window that sets no icon of its own. -->
+    <ApplicationIcon>..\..\assets\icon\fidologon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Shown by the touch prompt. -->
+    <Resource Include="..\..\assets\icon\fidologon-256.png" Link="fidologon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FidoLogon.Core\FidoLogon.Core.csproj" />
+  </ItemGroup>
+
+</Project>

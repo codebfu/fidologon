@@ -1,0 +1,16 @@
+#pragma once
+
+#include <guiddef.h>
+
+// {FAAD8F12-6991-448B-BF78-892ED3E6A76B}
+inline constexpr GUID CLSID_FidoLogonProvider = {
+    0xfaad8f12, 0x6991, 0x448b, {0xbf, 0x78, 0x89, 0x2e, 0xd3, 0xe6, 0xa7, 0x6b}};
+
+// {0D55732F-293A-41B1-90F3-D260B9C8EF94}
+inline constexpr GUID CLSID_FidoLogonFilter = {
+    0x0d55732f, 0x293a, 0x41b1, {0x90, 0xf3, 0xd2, 0x60, 0xb9, 0xc8, 0xef, 0x94}};
+
+// Built-in Windows password credential provider ("PasswordProvider").
+// {60B78E88-EAD8-445C-9CFD-0B87F74EA6CD}
+inline constexpr GUID CLSID_WindowsPasswordProvider = {
+    0x60b78e88, 0xead8, 0x445c, {0x9c, 0xfd, 0x0b, 0x87, 0xf7, 0x4e, 0xa6, 0xcd}};

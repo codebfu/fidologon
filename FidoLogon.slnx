@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FidoLogon.Cli/FidoLogon.Cli.csproj">
+      <Platform Project="x64" />
+    </Project>
+    <Project Path="src/FidoLogon.Config/FidoLogon.Config.csproj">
+      <Platform Project="x64" />
+    </Project>
+    <Project Path="src/FidoLogon.Core/FidoLogon.Core.csproj" />
+    <Project Path="src/FidoLogon.Service/FidoLogon.Service.csproj">
+      <Platform Project="x64" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FidoLogon.Tests/FidoLogon.Tests.csproj">
+      <Platform Project="x64" />
+    </Project>
+  </Folder>
+</Solution>

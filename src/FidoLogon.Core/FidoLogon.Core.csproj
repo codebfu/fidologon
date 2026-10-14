@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Managed wrapper around the FidoLogon native API.</Description>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="FidoLogon.Tests" />
+  </ItemGroup>
+
+  <!-- Ship the native API next to every assembly that references this project. -->
+  <ItemGroup>
+    <None Include="$(NativeBinDir)\native_api\fidologon_native.dll" Link="fidologon_native.dll"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+
+  <Target Name="CheckNativeApi" BeforeTargets="Build">
+    <Warning Condition="!Exists('$(NativeBinDir)\native_api\fidologon_native.dll')"
+             Text="fidologon_native.dll not found in $(NativeBinDir); build the native components first (scripts/build.ps1)." />
+  </Target>
+
+</Project>

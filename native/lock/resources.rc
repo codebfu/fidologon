@@ -1,0 +1,4 @@
+#define FL_FILE_DESCRIPTION "FidoLogon session lock helper"
+#define FL_ORIGINAL_FILENAME "FidoLogon.Lock.exe"
+#define FL_FILE_TYPE VFT_APP
+#include "version_common.rc"
